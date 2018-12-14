@@ -86,7 +86,7 @@ define windows_ad::user(
   $modify = false     # will be implement later for modify password. not used for now
   if ($writetoxmlflag == true){
     if (!defined(File[$xmlpath])){
-      file{"$xmlpath":
+      file{$xmlpath:
         content => template('windows_ad/xml.erb'),
         replace => no,
       }
@@ -107,8 +107,8 @@ define windows_ad::user(
       $fullnamevalue = $fullname
     }
 
-    if(!empty($emailaddress)){$emailaddressparam = "-EmailAddress '$emailaddress'"}
-    if(!empty($fullnamevalue)){$fullnameparam = "-DisplayName '$fullnamevalue'"}
+    if(!empty($emailaddress)){$emailaddressparam = "-EmailAddress '${emailaddress}'"}
+    if(!empty($fullnamevalue)){$fullnameparam = "-DisplayName '${fullnamevalue}'"}
     if(!empty($description)){$descriptionparam = "-Description '${description}'"}
     if(!empty($firstname)){$givenparam = "-GivenName '${firstname}'"}
     if(!empty($lastname)){$lastnameparam = "-SurName '${lastname}'"}
@@ -129,19 +129,19 @@ define windows_ad::user(
 
     $userprincipalname = "${accountname}@${domainname}"
     exec { "Delete User Desc - ${accountname}":
-      command     => "import-module activedirectory;\$user = Get-ADUser -Identity '${accountname}' -Properties Description;Set-ADUser -identity ${accountname} -Remove @{description=\$user.description}",
-      onlyif      => "\$user = Get-ADUser -Identity '${accountname}' -Properties *;if((dsquery.exe user -samid ${accountname}) -and ('${description}' -ne \$user.Description -and \$user.Description -ne \$null)){}else{exit 1}",
-      provider    => powershell,
+      command  => "import-module activedirectory;\$user = Get-ADUser -Identity '${accountname}' -Properties Description;Set-ADUser -identity ${accountname} -Remove @{description=\$user.description}",
+      onlyif   => "\$user = Get-ADUser -Identity '${accountname}' -Properties *;if((dsquery.exe user -samid ${accountname}) -and ('${description}' -ne \$user.Description -and \$user.Description -ne \$null)){}else{exit 1}",
+      provider => powershell,
     }
     exec { "Modify User - ${accountname}":
-      command     => "import-module activedirectory;Set-ADUser -identity ${accountname} ${fullnameparam} ${givenparam} ${lastnameparam} ${descriptionparam} ${emailaddressparam} -PasswordNeverExpires $${passwordneverexpires} -Enabled $${enabled};",
-      onlyif      => "\$user = Get-ADUser -Identity '${accountname}' -Properties *;if((dsquery.exe user -samid ${accountname}) -and (('${description}' -ne \$user.Description -and '${description}' -ne '') -or (('${firstname}' -ne \$user.GivenName) -and ('${firstname}' -ne '')) -or (('${lastname}' -ne \$user.Surname) -and ('${lastname}' -ne '')) -or (('${emailaddress}' -ne \$user.EmailAddress) -and ('${emailaddress}' -ne '')) -or ('${fullnamevalue}' -ne \$user.DisplayName))){}else{exit 1}",
-      provider    => powershell,
+      command  => "import-module activedirectory;Set-ADUser -identity ${accountname} ${fullnameparam} ${givenparam} ${lastnameparam} ${descriptionparam} ${emailaddressparam} -PasswordNeverExpires $${passwordneverexpires} -Enabled $${enabled};",
+      onlyif   => "\$user = Get-ADUser -Identity '${accountname}' -Properties *;if((dsquery.exe user -samid ${accountname}) -and (('${description}' -ne \$user.Description -and '${description}' -ne '') -or (('${firstname}' -ne \$user.GivenName) -and ('${firstname}' -ne '')) -or (('${lastname}' -ne \$user.Surname) -and ('${lastname}' -ne '')) -or (('${emailaddress}' -ne \$user.EmailAddress) -and ('${emailaddress}' -ne '')) -or ('${fullnamevalue}' -ne \$user.DisplayName))){}else{exit 1}",
+      provider => powershell,
     }
     exec { "Add User - ${accountname}":
-      command     => "import-module servermanager;add-windowsfeature -name 'rsat-ad-powershell' -includeAllSubFeature;import-module activedirectory;New-ADUser -name '${fullnamevalue}' -DisplayName '${fullnamevalue}' ${givenparam} ${lastnameparam} ${emailaddressparam} -Samaccountname '${accountname}' -UserPrincipalName '${userprincipalname}' -Description '${description}' -PasswordNeverExpires $${passwordneverexpires} -path '${path}' -AccountPassword (ConvertTo-SecureString '${pwd}' -AsPlainText -force) -Enabled $${enabled};",
-      onlyif      => "\$oustring = \"CN=${fullnamevalue},${path}\"; if([adsi]::Exists(\"LDAP://\$oustring\")){exit 1}",
-      provider    => powershell,
+      command  => "import-module servermanager;add-windowsfeature -name 'rsat-ad-powershell' -includeAllSubFeature;import-module activedirectory;New-ADUser -name '${fullnamevalue}' -DisplayName '${fullnamevalue}' ${givenparam} ${lastnameparam} ${emailaddressparam} -Samaccountname '${accountname}' -UserPrincipalName '${userprincipalname}' -Description '${description}' -PasswordNeverExpires $${passwordneverexpires} -path '${path}' -AccountPassword (ConvertTo-SecureString '${pwd}' -AsPlainText -force) -Enabled $${enabled};",
+      onlyif   => "\$oustring = \"CN=${fullnamevalue},${path}\"; if([adsi]::Exists(\"LDAP://\$oustring\")){exit 1}",
+      provider => powershell,
     }
     if ($writetoxmlflag == true){
       exec { "Add to XML - ${accountname}":
@@ -153,9 +153,9 @@ define windows_ad::user(
     }
   }elsif($ensure == 'absent'){
     exec { "Remove User - ${accountname}":
-      command     => "import-module activedirectory;Remove-ADUser -identity ${accountname} -Confirm:$${confirmdeletion}",
-      onlyif      => "if(dsquery.exe user -samid ${accountname} ){return \$true}else{exit 1}",
-      provider    => powershell,
+      command  => "import-module activedirectory;Remove-ADUser -identity ${accountname} -Confirm:$${confirmdeletion}",
+      onlyif   => "if(dsquery.exe user -samid ${accountname} ){return \$true}else{exit 1}",
+      provider => powershell,
     }
     if ($writetoxmlflag == true){
       exec { "Remove to XML - ${accountname}":

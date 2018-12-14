@@ -57,15 +57,15 @@ define windows_ad::group(
 
   if($ensure == 'present'){
     exec { "Add Group - ${groupname}":
-      command     => "import-module activedirectory;New-ADGroup -Description '${description}' -DisplayName '${displayname}' -Name '${groupname}' -GroupCategory '${groupcategory}' -GroupScope '${groupscope}' -Path '${path}'",
-      onlyif      => "\$groupname = \"${groupname}\";\$path = \"${path}\";\$oustring = \"CN=\$groupname,\$path\"; if([adsi]::Exists(\"LDAP://\$oustring\")){exit 1}",
-      provider    => powershell,
+      command  => "import-module activedirectory;New-ADGroup -Description '${description}' -DisplayName '${displayname}' -Name '${groupname}' -GroupCategory '${groupcategory}' -GroupScope '${groupscope}' -Path '${path}'",
+      onlyif   => "\$groupname = \"${groupname}\";\$path = \"${path}\";\$oustring = \"CN=\$groupname,\$path\"; if([adsi]::Exists(\"LDAP://\$oustring\")){exit 1}",
+      provider => powershell,
     }
   }else{
     exec { "Remove Group - ${groupname}":
-      command     => "import-module activedirectory;Remove-ADGroup -identity '${groupname}' -confirm:$${confirmdeletion}",
-      onlyif      => "\$groupname = \"${groupname}\";\$path = \"${path}\";\$oustring = \"CN=\$groupname,\$path\"; if([adsi]::Exists(\"LDAP://\$oustring\")){}else{exit 1}",
-      provider    => powershell,
+      command  => "import-module activedirectory;Remove-ADGroup -identity '${groupname}' -confirm:$${confirmdeletion}",
+      onlyif   => "\$groupname = \"${groupname}\";\$path = \"${path}\";\$oustring = \"CN=\$groupname,\$path\"; if([adsi]::Exists(\"LDAP://\$oustring\")){}else{exit 1}",
+      provider => powershell,
     }
   }
 }

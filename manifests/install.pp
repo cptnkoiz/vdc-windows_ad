@@ -1,4 +1,4 @@
-# Class: windows_ad
+# Class: windows_ad for Windows 2008 R2, 2012, 2012 R2, 2016
 #
 # Full description of windows_ad::install here.
 #
@@ -10,12 +10,14 @@
 #
 #
 # === Examples
-#
-#  class {'windows_ad::install':
-#  install                => present,
-#  installmanagementtools => true,
-#  installsubfeatures     => true,
-#  restart                => true,
+# 
+#  class{'windows_ad::install':
+#    ensure                 => present,
+#    installmanagementtools => true,
+#    installsubfeatures     => true,
+#    restart                => true,
+#    installflag            => false,
+#  }
 #
 # === Authors
 #
@@ -26,47 +28,58 @@
 # Copyright 2014 Jerome RIVIERE.
 #
 class windows_ad::install (
-    $ensure = $ensure,
-    $installmanagementtools = $installmanagementtools,
-    $installsubfeatures = $installsubfeatures,
-    $restart = $restart,
-    $installflag = $installflag,
+    Enum['present', 'absent'] $ensure = $ensure,
+    Boolean $installmanagementtools   = $installmanagementtools,
+    Boolean $installsubfeatures       = $installsubfeatures,
+    Boolean $restart                  = $restart,
+    Boolean $installflag              = $installflag,
 ) {
-
-  validate_re($ensure, '^(present|absent)$', 'valid values for ensure are \'present\' or \'absent\'')
-  validate_bool($installmanagementtools)
-  validate_bool($installsubfeatures)
-  validate_bool($restart)
-  validate_bool($installflag)
 
   if ($installflag == true){
     if $::operatingsystem != 'windows' { fail ("${module_name} not supported on ${::operatingsystem}") }
-    if $restart { $restartbool = 'true' } else { $restartbool = 'false' }
-    if $installsubfeatures { $subfeatures = '-IncludeAllSubFeature' }
 
-    if $::kernelversion =~ /^(6.1)/ and $installmanagementtools {
-      fail ('Windows 2012 or newer is required to use the installmanagementtools parameter')
-    } elsif $installmanagementtools {
-      $managementtools = '-IncludeManagementTools'
+    $restartbool = $restart ? {
+      true  => true,
+      false => false,
+      default => false,
     }
+    # if $restart { $restartbool = true } else { $restartbool = false }
+    $subfeatures = $installsubfeatures ? {
+      false => undef,
+      true  => '-IncludeAllSubFeature',
+    }
+    # if $installsubfeatures { $subfeatures = '-IncludeAllSubFeature' }
 
-    # Windows 2008 R2 and newer required http://technet.microsoft.com/en-us/library/ee662309.aspx
-    if $::kernelversion !~ /^(6\.1|6\.2|6\.3)/ { fail ("${module_name} requires Windows 2008 R2 or newer") }
+    # if $::kernelversion =~ /^(6.1)/ and $installmanagementtools {
+    #   fail ('Windows 2012 or newer is required to use the installmanagementtools parameter')
+    # } elsif $installmanagementtools {
+    #   $managementtools = '-IncludeManagementTools'
+    # }
 
-    # from Windows 2012 'Add-WindowsFeature' has been replaced with 'Install-WindowsFeature' http://technet.microsoft.com/en-us/library/ee662309.aspx
+    # Kernel versions allowed for installation: Windows server 2008 R2, 2012, 2012 R2, 2016
+    if $::kernelversion !~ /^(6\.1|6\.2|6\.3|10)/ { fail ("${module_name} requires Windows 2008 R2 or newer") }
+
+    # from Windows 2008 R2 install with 'Add-WindowsFeature' http://technet.microsoft.com/en-us/library/ee662309.aspx
+    # from Windows 2012 and 2016 'Add-WindowsFeature' has been replaced with 'Install-WindowsFeature' http://technet.microsoft.com/en-us/library/ee662309.aspx
     if ($ensure == 'present') {
-      if $::kernelversion =~ /^(6.1)/ { $command = 'Add-WindowsFeature' } else { $command = 'Install-WindowsFeature' }
+      if $::kernelversion =~ /^(6.1)/ {
+        $command = 'Add-WindowsFeature'
+        if $installmanagementtools {fail ('Windows 2012 or newer is required to use the installmanagementtools parameter')}
+      } else {
+        $command = 'Install-WindowsFeature'
+        if $installmanagementtools {$managementtools = '-IncludeManagementTools'}
+        }
 
       exec { "add-feature-${title}":
-        command   => "Import-Module ServerManager; ${command} AD-Domain-Services ${managementtools} ${subfeatures} -Restart:$${restartbool}",
-        onlyif    => "Import-Module ServerManager; if (@(Get-WindowsFeature AD-Domain-Services | ?{\$_.Installed -match \'false\'}).count -eq 0) { exit 1 }",
-        provider  => powershell,
+        command  => "Import-Module ServerManager; ${command} AD-Domain-Services ${managementtools} ${subfeatures} -Restart:$${restartbool}",
+        onlyif   => "Import-Module ServerManager; if (@(Get-WindowsFeature AD-Domain-Services | ?{\$_.Installed -match \'false\'}).count -eq 0) { exit 1 }", # lint:ignore:140chars
+        provider => powershell,
       }
     } elsif ($ensure == 'absent') {
       exec { "remove-feature-${title}":
-        command   => "Import-Module ServerManager; Remove-WindowsFeature AD-Domain-Services -Restart:$${restartbool}",
-        onlyif    => "Import-Module ServerManager; if (@(Get-WindowsFeature AD-Domain-Services | ?{\$_.Installed -match \'true\'}).count -eq 0) { exit 1 }",
-        provider  => powershell,
+        command  => "Import-Module ServerManager; Remove-WindowsFeature AD-Domain-Services -Restart:$${restartbool}",
+        onlyif   => "Import-Module ServerManager; if (@(Get-WindowsFeature AD-Domain-Services |?{\$_.Installed -match \'true\'}).count -eq 0) { exit 1 }", # lint:ignore:140chars
+        provider => powershell,
       }
     }
   }

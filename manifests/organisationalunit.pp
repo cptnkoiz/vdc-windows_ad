@@ -59,20 +59,20 @@ define windows_ad::organisationalunit(
 
   if($ensure == 'present'){
     exec { "Adding OU - ${ouName}":
-      command     => "import-module activedirectory;New-ADOrganizationalUnit -Name '${ouName}' -Path '${path}' -ProtectedFromAccidentalDeletion $${protectfordeletion}",
-      onlyif      => "if([adsi]::Exists(\"LDAP://OU=${ouName},${path}\")){exit 1}",
-      provider    => powershell,
+      command  => "import-module activedirectory;New-ADOrganizationalUnit -Name '${ouName}' -Path '${path}' -ProtectedFromAccidentalDeletion $${protectfordeletion}",
+      onlyif   => "if([adsi]::Exists(\"LDAP://OU=${ouName},${path}\")){exit 1}",
+      provider => powershell,
     }
   }elsif($ensure == 'absent'){
     exec { "Unprotecting OU - ${ouName}":
-      command     => "Set-ADOrganizationalUnit -ProtectedFromAccidentalDeletion \$false -Identity \"OU=${ouName},${path}\";",
-      onlyif      => "if([adsi]::Exists(\"LDAP://OU=${ouName},${path}\")){}else{exit 1}",
-      provider    => powershell,
+      command  => "Set-ADOrganizationalUnit -ProtectedFromAccidentalDeletion \$false -Identity \"OU=${ouName},${path}\";",
+      onlyif   => "if([adsi]::Exists(\"LDAP://OU=${ouName},${path}\")){}else{exit 1}",
+      provider => powershell,
     }
     exec { "Deleting OU - ${ouName}":
-      command     => "Remove-ADOrganizationalUnit -Identity \"OU=${ouName},${path}\" -Confirm:$${confirmdeletion} -Recursive;",
-      onlyif      => "if([adsi]::Exists(\"LDAP://OU=${ouName},${path}\")){}else{exit 1}",
-      provider    => powershell,
+      command  => "Remove-ADOrganizationalUnit -Identity \"OU=${ouName},${path}\" -Confirm:$${confirmdeletion} -Recursive;",
+      onlyif   => "if([adsi]::Exists(\"LDAP://OU=${ouName},${path}\")){}else{exit 1}",
+      provider => powershell,
     }
     Exec["Unprotecting OU - ${ouName}"] -> Exec["Deleting OU - ${ouName}"]
   }
