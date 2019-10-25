@@ -61,7 +61,7 @@ define windows_ad::users(
   warning('Instead of using this class, you can declare a hash of user (see readme file), and use function create_resources(windows_ad::user, $userhash)')
   $_users = $users
   each($_users) |$user|{
-    windows_ad::user{"${user['accountname']}":
+    windows_ad::user{$user['accountname']:
       ensure               => $user['ensure'],
       domainname           => $domainname,
       path                 => $user['path'],

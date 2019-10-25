@@ -1,5 +1,5 @@
 #
-# Help can be found in readme.rd for a global help
+# Help can be found in readme.md for a global help
 #
 # === Authors
 #
@@ -10,67 +10,79 @@
 # Copyright 2014 Jerome RIVIERE.
 #
 class windows_ad (
-  ### part install AD
-  $install                   = 'present',
-  $installmanagementtools    = true,
-  $installsubfeatures        = false,
-  $restart                   = false,
-  $installflag               = true,                 # Flag to bypass the install of AD if desired
-
-  ### Part Configure AD - Global
-  $configure                 = 'present',
-  $domain                    = 'forest',
-  $domainname                = undef,                # FQDN
-  $netbiosdomainname         = undef,                # FQDN
-  $configureflag             = true,                 # Flag to bypass the configuration of AD if desired
-
-  #level AD
-  $domainlevel               = '6',                   # Domain level {4 - Server 2008 R2 | 5 - Server 2012 | 6 - Server 2012 R2}
-  $forestlevel               = '6',                   # Domain level {4 - Server 2008 R2 | 5 - Server 2012 | 6 - Server 2012 R2}
-
-  $installdns                = 'yes',                 # Add DNS Server Role
-  $globalcatalog             = 'yes',                 # Add Global Catalog functionality
-  $kernel_ver                = $::kernelversion,
-
-  # Installation Directories
-  $databasepath              = 'c:\\windows\\ntds',   # Active Directory database path
-  $logpath                   = 'c:\\windows\\ntds',   # Active Directory log path
-  $sysvolpath                = 'c:\\windows\\sysvol', # Active Directory sysvol path
-
-  $dsrmpassword              = undef,
-
-  ### Part Configure AD - Forest
-
-  #uninstall forest
-  $localadminpassword        = undef,
-  $force                     = true,
-  $forceremoval              = true,
-  $uninstalldnsrole          = 'yes',
-  $demoteoperationmasterrole = true,
-
-  ### Part Configure AD - Other
-  $secure_string_pwd         = undef,
-  $installtype               = undef,          # New domain or replica of existing domain {replica | domain}
-  $domaintype                = undef,          # Type of domain {Tree | Child | Forest} (New domain tree in an existing forest, child domain, or new forest)
-  $sitename                  = undef,          # Site Name
-
-  ### Define Hiera hashes
-  $groups                    = undef,
-  $groups_hiera_merge        = true,
-  $users                     = undef,
-  $users_hiera_merge         = true,
-  $usersingroup              = undef,
-  $usersingroup_hiera_merge  = true,
-) {
+  #######################
+  ### part install AD ###
+  #######################
   # when present install process will be set. if already install nothing done
   # when absent uninstall will be launch
-  validate_re($install, '^(present|absent)$', 'valid values for install are \'present\' or \'absent\'')
+  Enum['present', 'absent']$install = 'present',
+  Boolean $installmanagementtools   = true,
+  Boolean $installsubfeatures       = false,
+  Boolean $restart                  = false,
+  Boolean $installflag              = true,           # Flag to bypass the install of AD if desired
+
+  ##################################
+  ### Part Configure AD - Global ###
+  ##################################
   # when present configure process will be done. if already configure nothing done
   # absent don't do anything right now
-  validate_re($configure, '^(present|absent)$', 'valid values for configure are \'present\' or \'absent\'')
-  validate_bool($configureflag)
-  validate_bool($installflag)
-  
+  Enum['present', 'absent']$configure = 'present',
+  String $domain                      = 'forest',
+  Optional[String] $domainname        = undef,        # FQDN
+  Optional[String] $netbiosdomainname = undef,        # FQDN
+  Boolean $configureflag              = true,         # Flag to bypass the configuration of AD if desired
+
+  #level AD
+  Integer[4,6] $domainlevel  = 6,                     # Domain level {4 - Server 2008 R2 | 5 - Server 2012 | 6 - Server 2012 R2}
+  Integer[4,6] $forestlevel  = 6,                     # Domain level {4 - Server 2008 R2 | 5 - Server 2012 | 6 - Server 2012 R2}
+
+  Variant[Enum['true','false'],Boolean] $installdns    = true,                   # Add DNS Server Role
+  String $globalcatalog                                = 'yes',                  # Add Global Catalog functionality
+  String $kernel_ver                                   = $::kernelversion,
+
+  # Installation Directories
+  # TODO Probar Absolutepath, es del módulo stdlib
+  String $databasepath       = 'c:\\windows\\ntds',   # Active Directory database path
+  String $logpath            = 'c:\\windows\\ntds',   # Active Directory log path
+  String $sysvolpath         = 'c:\\windows\\sysvol', # Active Directory sysvol path
+
+  Optional[String] $dsrmpassword   = undef,
+
+  ##################################
+  ### Part Configure AD - Forest ###
+  ##################################
+  #uninstall forest
+  Optional[String] $localadminpassword = undef,
+  Boolean $force                       = true,
+  Boolean $forceremoval                = true,
+  String $uninstalldnsrole             = 'yes',
+  Boolean $demoteoperationmasterrole   = true,
+
+  #################################
+  ### Part Configure AD - Other ###
+  #################################
+  Optional[String] $secure_string_pwd  = undef,
+  Optional[String] $installtype        = undef,          # New domain or replica of existing domain {replica | domain}
+  Optional[String] $domaintype         = undef,          # lint:ignore:140chars # Type of domain {Tree | Child | Forest} (New domain tree in an existing forest, child domain, or new forest) 
+  Optional[String] $sitename           = undef,          # Site Name
+
+  ### Define Hiera hashes ###
+  Optional[Hash] $groups             = undef,
+  Boolean $groups_hiera_merge        = true,
+  Optional[Hash] $users              = undef,
+  Boolean $users_hiera_merge         = true,
+  Optional[Hash] $usersingroup       = undef,
+  Boolean $usersingroup_hiera_merge  = true,
+) {
+
+  $install_dns = $installdns ? {
+    'true'  => true,
+    true    => true,
+    'false' => false,
+    false   => false,
+    default => fail("Los valores introducidos en hiera son incorrectos. Valor introducido: ${installdns}"),
+  }
+
   class{'windows_ad::install':
     ensure                 => $install,
     installmanagementtools => $installmanagementtools,
@@ -90,7 +102,7 @@ class windows_ad (
     logpath                   => $logpath,
     sysvolpath                => $sysvolpath,
     dsrmpassword              => $dsrmpassword,
-    installdns                => $installdns,
+    installdns                => $install_dns,
     kernel_ver                => $kernel_ver,
     localadminpassword        => $localadminpassword,
     force                     => $force,
@@ -100,67 +112,60 @@ class windows_ad (
     configureflag             => $configureflag,
   }
   if($installflag or $configureflag){
-    if($install == 'present'){
-      anchor{'windows_ad::begin':} -> Class['windows_ad::install'] -> Class['windows_ad::conf_forest'] -> anchor{'windows_ad::end':} -> Windows_ad::Organisationalunit <| |> -> Windows_ad::Group <| |> -> Windows_ad::User <| |> -> Windows_ad::Groupmembers <| |>
+    if($install == present){
+      anchor{'windows_ad::begin':}
+      -> Class['windows_ad::install']
+      -> Class['windows_ad::conf_forest']
+      -> anchor{'windows_ad::end':}
+      -> Windows_ad::Organisationalunit <| |>
+      -> Windows_ad::Group <| |>
+      -> Windows_ad::User <| |>
+      -> Windows_ad::Groupmembers <| |>
     }else{
       if($configure == present){
         fail('You can\'t desactivate the Role ADDS without uninstall ADDSControllerDomain first')
       }else{
-        anchor{'windows_ad::begin':} -> Class['windows_ad::conf_forest'] -> Class['windows_ad::install'] -> anchor{'windows_ad::end':} 
+        anchor{'windows_ad::begin':}
+        -> Class['windows_ad::conf_forest']
+        -> Class['windows_ad::install']
+        -> anchor{'windows_ad::end':}
       }
     }
   }else{
-    anchor{'windows_ad::begin':} -> Windows_ad::Organisationalunit <| |> -> Windows_ad::Group <| |> -> Windows_ad::User <| |> -> Windows_ad::Groupmembers <| |> -> anchor{'windows_ad::end':}
+    anchor{'windows_ad::begin':}
+    -> Windows_ad::Organisationalunit <| |>
+    -> Windows_ad::Group <| |>
+    -> Windows_ad::User <| |>
+    -> Windows_ad::Groupmembers <| |>
+    -> anchor{'windows_ad::end':}
   }
-
-  if type_of($groups_hiera_merge) <= String {
-    $groups_hiera_merge_real = str2bool($groups_hiera_merge)
-  } else {
-    $groups_hiera_merge_real = $groups_hiera_merge
-  }
-  validate_bool($groups_hiera_merge_real)
 
   if $groups != undef {
-    if $groups_hiera_merge_real == true {
+    if $groups_hiera_merge == true {
       $groups_real = hiera_hash('windows_ad::groups')
     } else {
       $groups_real = $groups
     }
-    validate_hash($groups_real)
     create_resources('windows_ad::group',$groups_real)
   }
 
-  if type_of($users_hiera_merge) <= String {
-    $users_hiera_merge_real = str2bool($users_hiera_merge)
-  } else {
-    $users_hiera_merge_real = $users_hiera_merge
-  }
-  validate_bool($users_hiera_merge_real)
-
   if $users != undef {
-    if $users_hiera_merge_real == true {
+    if $users_hiera_merge == true {
       $users_real = hiera_hash('windows_ad::users')
     } else {
       $users_real = $users
     }
-    validate_hash($users_real)
     create_resources('windows_ad::user',$users_real)
   }
 
-  if type_of($usersingroup_hiera_merge) <= String {
-    $usersingroup_hiera_merge_real = str2bool($usersingroup_hiera_merge)
-  } else {
-    $usersingroup_hiera_merge_real = $usersingroup_hiera_merge
-  }
-  validate_bool($usersingroup_hiera_merge_real)
 
   if $usersingroup != undef {
-    if $usersingroup_hiera_merge_real == true {
+    if $usersingroup_hiera_merge == true {
       $usersingroup_real = hiera_hash('windows_ad::usersingroup')
     } else {
       $usersingroup_real = $usersingroup
     }
-    validate_hash($usersingroup_real)
     create_resources('windows_ad::groupmembers',$usersingroup_real)
   }
+
 }
