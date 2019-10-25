@@ -2,31 +2,6 @@ windows_ad
 
 This is the windows_ad puppet module.
 
-##Introduction
-This is the windows_ad puppet module.
-Inspired from [opentable/windows_feature](https://forge.puppetlabs.com/opentable/windows_feature) module and from [martezr/windows_domain_controller](https://forge.puppetlabs.com/martezr/windows_domain_controller) for the installation and configuration of a windows domain
-
-This module have two main roles :
-- Install & configure AD
-- Manage Users/OU/Groups in your Active Directory
-
-
-This module permit you to install a Windows AD Domain controller on a Windows Server.
-
-
-Moreover, it allows you to create/Remove User in Active Directory, but also permit you to create/Remove Organisational Unit in Active Directory
-
-
-This module have been tested on Windows Server 2012 r2, should work on Windows Server since 2008 R2.
-Puppet open source v3.5.1 and v3.6.2, the puppetmaster version is v3.4.3 (on ubuntu 14.04 LTS). Should work since version 3.5.1 of puppet
-
-##Last Fix/Update
-V 0.3.1 :
- - Fix add user. (dsquery.exe doesn't seem to work anymore) - Works with fullname value
- - Add Pull Request #8 (fix readme for Group)
-V 0.3.2 :
- - Fix add group and groupmember dsquery.exe doesn't seem to work anymore).
-
 ##Module Description
 
 For now, the module allow the installation and creation of new domain, in a new forest.
